@@ -1,0 +1,199 @@
+import sensor
+import image
+import time
+import mjpeg
+import os
+import pyb
+
+# ==============================
+# CONFIGURACIÓN DE LA CÁMARA
+# ==============================
+
+sensor.reset()
+sensor.set_pixformat(sensor.RGB565)
+sensor.set_framesize(sensor.QVGA)
+sensor.skip_frames(time=2000)
+
+clock = time.clock()
+
+# USB de la computadora
+usb = pyb.USB_VCP()
+
+# ==============================
+# VARIABLES
+# ==============================
+
+grabando = False
+video = None
+
+foto_num = 1
+video_num = 1
+
+print("==============================")
+print("       OPENMV N6")
+print("==============================")
+print("I = sacar foto")
+print("V = iniciar/detener video")
+print("Q = salir")
+print("==============================")
+
+
+# ==============================
+# BUSCAR NOMBRE PARA LA FOTO
+# ==============================
+
+def nombre_foto():
+
+    global foto_num
+
+    while True:
+
+        nombre = "foto_%03d.jpg" % foto_num
+
+        try:
+            os.stat(nombre)
+            foto_num += 1
+
+        except:
+            return nombre
+
+
+# ==============================
+# BUSCAR NOMBRE PARA EL VIDEO
+# ==============================
+
+def nombre_video():
+
+    global video_num
+
+    while True:
+
+        nombre = "video_%03d.mjpeg" % video_num
+
+        try:
+            os.stat(nombre)
+            video_num += 1
+
+        except:
+            return nombre
+
+
+# ==============================
+# BUCLE PRINCIPAL
+# ==============================
+
+while True:
+
+    clock.tick()
+
+    # Capturar imagen
+    img = sensor.snapshot()
+
+    # ==========================================
+    # COMPROBAR SI LLEGÓ UNA TECLA POR USB
+    # ==========================================
+
+    if usb.any():
+
+        datos = usb.read()
+
+        if datos:
+
+            # Puede llegar más de un carácter,
+            # por eso recorremos todos los bytes.
+
+            for tecla in datos:
+
+                # Convertir a mayúscula
+                tecla = chr(tecla).upper()
+
+                # ==================================
+                # I = FOTO
+                # ==================================
+
+                if tecla == "I":
+
+                    nombre = nombre_foto()
+
+                    img.save(nombre)
+
+                    print("FOTO GUARDADA:", nombre)
+
+                # ==================================
+                # V = VIDEO
+                # ==================================
+
+                elif tecla == "V":
+
+                    # ------------------------------
+                    # INICIAR VIDEO
+                    # ------------------------------
+
+                    if not grabando:
+
+                        nombre = nombre_video()
+
+                        video = mjpeg.Mjpeg(nombre)
+
+                        grabando = True
+
+                        print("VIDEO INICIADO:", nombre)
+
+                    # ------------------------------
+                    # DETENER VIDEO
+                    # ------------------------------
+
+                    else:
+
+                        video.close()
+
+                        video = None
+
+                        grabando = False
+
+                        print("VIDEO DETENIDO")
+
+                # ==================================
+                # Q = SALIR
+                # ==================================
+
+                elif tecla == "Q":
+
+                    if grabando:
+
+                        video.close()
+
+                        video = None
+
+                        grabando = False
+
+                        print("VIDEO DETENIDO")
+
+                    print("PROGRAMA TERMINADO")
+
+                    raise SystemExit
+
+
+    # ==========================================
+    # GRABAR FRAME SI ESTAMOS FILMANDO
+    # ==========================================
+
+    if grabando:
+
+        video.add_frame(img)
+
+        # Cada cierto número de frames
+        # sincronizamos el archivo.
+
+        if video.count() % 30 == 0:
+
+            video.sync()
+
+
+    # ==========================================
+    # MOSTRAR FPS
+    # ==========================================
+
+    # Descomentar si querés ver los FPS:
+    #
+    # print("FPS:", clock.fps())
