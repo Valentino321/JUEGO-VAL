@@ -1,0 +1,89 @@
+// =====================================================
+// PRUEBA DE ODOMETRÍA - ESP32
+// =====================================================
+
+// ----- PINES DE LOS ENCODERS -----
+// Poné acá los GPIO cuando sepas cuáles vas a usar.
+#define ENCODER_IZQ 
+#define ENCODER_DER 
+
+// ----- DATOS DE LA RUEDA -----
+// Cambialos cuando conozcas los datos de tus encoders.
+#define PULSOS_POR_VUELTA 100
+#define DIAMETRO_RUEDA_CM 6.5
+
+volatile long pulsosIzq = 0;
+volatile long pulsosDer = 0;
+
+
+// ----- INTERRUPCIONES -----
+
+void contarIzq() {
+    pulsosIzq++;
+}
+
+void contarDer() {
+    pulsosDer++;
+}
+
+
+// =====================================================
+// SETUP
+// =====================================================
+
+void setup() {
+
+    Serial.begin(115200);
+
+    // Cuando pongas los GPIO, estas líneas funcionarán:
+    pinMode(ENCODER_IZQ, INPUT_PULLUP);
+    pinMode(ENCODER_DER, INPUT_PULLUP);
+
+    attachInterrupt(
+        digitalPinToInterrupt(ENCODER_IZQ),
+        contarIzq,
+        RISING
+    );
+
+    attachInterrupt(
+        digitalPinToInterrupt(ENCODER_DER),
+        contarDer,
+        RISING
+    );
+
+    Serial.println("==============================");
+    Serial.println("   PRUEBA DE ODOMETRIA ESP32");
+    Serial.println("==============================");
+}
+
+
+// =====================================================
+// LOOP
+// =====================================================
+
+void loop() {
+
+    // Circunferencia de la rueda.
+    float circunferencia = 3.14159265 * DIAMETRO_RUEDA_CM;
+
+    // Distancia recorrida por cada rueda.
+    float distanciaIzq =
+        (pulsosIzq / (float)PULSOS_POR_VUELTA) * circunferencia;
+
+    float distanciaDer =
+        (pulsosDer / (float)PULSOS_POR_VUELTA) * circunferencia;
+
+
+    // ----- MOSTRAR EN CONSOLA -----
+
+    Serial.print("Izquierda: ");
+    Serial.print(distanciaIzq, 2);
+    Serial.print(" cm    ");
+
+    Serial.print("Derecha: ");
+    Serial.print(distanciaDer, 2);
+    Serial.println(" cm");
+
+
+    delay(200);
+}
